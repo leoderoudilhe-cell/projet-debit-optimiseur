@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Débit Optimiseur</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="mark">DÉBIT</span>
+    <span class="name">Optimiseur</span>
+  </div>
+  <nav class="nav">
+    <a href="/" class="active">Nouveau débit</a>
+    <a href="/history.html">Historique</a>
+  </nav>
+</header>
+
+<main class="wrap">
+  <div class="lede">
+    <h1>Nouveau débit</h1>
+    <p>Colle ton tableau Cadwork, vérifie les matériaux, lance l'optimisation.</p>
+  </div>
+
+  <!-- ═══ ÉTAPE 1 — Saisie ═══ -->
+  <form id="parse-form">
+    <div class="stagebox">
+      <h2>① Projet</h2>
+      <div class="field-row">
+        <div class="field">
+          <label for="project-name">Nom du projet (optionnel)</label>
+          <input type="text" id="project-name" placeholder="ex. Module B — Salon">
+        </div>
+      </div>
+    </div>
+
+    <div class="stagebox">
+      <h2>② Données</h2>
+      <div class="field">
+        <label for="paste-input">Tableau de débit — coller depuis Cadwork ou Excel</label>
+        <textarea id="paste-input" placeholder="Colle ici le contenu de ta fiche de débit Cadwork…&#10;&#10;Séparateur ; · colonnes : No. LP / Nom / Matériau / Qté / Haut. / Larg. / Long."></textarea>
+        <span class="drop-hint">ou sélectionne un fichier CSV ci-dessous</span>
+      </div>
+      <div class="field" style="margin-top:12px;">
+        <label for="file-input">Fichier CSV</label>
+        <input type="file" id="file-input" accept=".csv,.txt" style="color:var(--ink-dim);font-size:12px;">
+      </div>
+    </div>
+
+    <div class="stagebox">
+      <h2>Réglages avancés</h2>
+      <span class="advanced-toggle" id="advanced-toggle">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Afficher les réglages panneau
+      </span>
+      <div class="advanced-panel" id="advanced-panel">
+        <div class="field-row" style="margin-top:16px;">
+          <div class="field"><label>Largeur panneau (mm)</label><input type="text" id="panel-width" value="2800"></div>
+          <div class="field"><label>Hauteur panneau (mm)</label><input type="text" id="panel-height" value="2070"></div>
+          <div class="field"><label>Lame de scie (mm)</label><input type="text" id="kerf" value="3"></div>
+          <div class="field"><label>Marge de bord (mm)</label><input type="text" id="border-margin" value="5"></div>
+        </div>
+      </div>
+    </div>
+
+    <button type="submit" class="btn-primary" id="parse-btn">
+      <span id="parse-btn-text">Analyser le débit</span>
+      <span class="spinner" id="parse-spinner"></span>
+    </button>
+    <div class="error-msg" id="parse-error"></div>
+  </form>
+
+  <!-- ═══ ÉTAPE 2 — Confirmation du fil ═══ -->
+  <section id="grain-section" style="margin-top:32px;">
+    <div class="stagebox">
+      <h2>③ Sens du fil — vérification</h2>
+      <p class="info-note">
+        Les matériaux avec <strong>sens du fil activé</strong> ne seront pas tournés à 90° lors de l'optimisation.
+        Vérifie que la détection automatique est correcte et corrige si nécessaire avant de lancer le calcul.
+      </p>
+      <table class="grain-table" id="grain-table">
+        <thead>
+          <tr>
+            <th>Matériau</th>
+            <th>Épaisseurs</th>
+            <th>Pièces</th>
+            <th>Sens du fil</th>
+          </tr>
+        </thead>
+        <tbody id="grain-tbody"></tbody>
+      </table>
+    </div>
+    <button class="btn-primary" id="optimize-btn" style="margin-top:0;">
+      <span id="optimize-btn-text">Optimiser</span>
+      <span class="spinner" id="optimize-spinner"></span>
+    </button>
+    <div class="error-msg" id="optimize-error"></div>
+  </section>
+
+  <hr>
+
+  <!-- ═══ RÉSULTAT ═══ -->
+  <section id="result-section">
+    <div class="lede">
+      <h1 id="result-title">Résultat</h1>
+    </div>
+    <div class="stats-row">
+      <div class="stat-card"><div class="val" id="stat-panels">—</div><div class="lbl">Panneaux utilisés</div></div>
+      <div class="stat-card"><div class="val" id="stat-waste">—</div><div class="lbl">Taux de chute</div></div>
+      <div class="stat-card"><div class="val" id="stat-materials">—</div><div class="lbl">Matériaux</div></div>
+      <div class="stat-card"><div class="val" id="stat-pieces">—</div><div class="lbl">Pièces placées</div></div>
+      <div class="stat-card"><div class="val" id="stat-area">—</div><div class="lbl">Surface consommée</div></div>
+    </div>
+    <div class="export-row">
+      <a class="btn-export" id="dl-recap" href="#" download>
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v8M4 6l3 3 3-3M2 11h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Fiche récapitulative (PDF)
+      </a>
+      <a class="btn-export" id="dl-layout" href="#" download>
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v8M4 6l3 3 3-3M2 11h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Plans de calepinage (PDF)
+      </a>
+    </div>
+  </section>
+</main>
+
+<script src="/js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Débit — Maquette</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #1C1E1B;
+    --bg-soft: #24271F;
+    --panel: #F5F3EE;
+    --panel-line: #D8D3C4;
+    --wood: #D9A066;
+    --wood-deep: #B97F3F;
+    --ink: #F5F3EE;
+    --ink-dim: #9A9C92;
+    --alert: #C44536;
+    --ok: #5C8A6E;
+    --mono: 'Space Mono', monospace;
+    --sans: 'Inter', sans-serif;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:var(--sans);
+    min-height:100vh;
+  }
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:20px 40px;
+    border-bottom:1px solid #33362c;
+  }
+  .brand{
+    display:flex; align-items:baseline; gap:10px;
+  }
+  .brand .mark{
+    font-family:var(--mono); font-weight:700; font-size:13px;
+    color:var(--wood); letter-spacing:2px;
+  }
+  .brand .name{
+    font-size:18px; font-weight:600;
+  }
+  .nav{
+    display:flex; gap:28px;
+    font-size:14px; color:var(--ink-dim);
+  }
+  .nav a{ color:var(--ink-dim); text-decoration:none; cursor:default;}
+  .nav a.active{ color:var(--ink); }
+
+  .wrap{
+    max-width:1180px; margin:0 auto; padding:48px 40px 100px;
+  }
+
+  .lede{
+    display:flex; justify-content:space-between; align-items:flex-end;
+    margin-bottom:36px; gap:24px; flex-wrap:wrap;
+  }
+  h1{
+    font-family:var(--mono); font-weight:700; font-size:34px; letter-spacing:-0.5px;
+  }
+  .lede p{
+    color:var(--ink-dim); font-size:14px; margin-top:6px; max-width:480px;
+  }
+
+  .stagebox{
+    background:var(--bg-soft);
+    border:1px solid #33362c;
+    border-radius:4px;
+    padding:32px;
+    margin-bottom:28px;
+  }
+  .field-row{
+    display:flex; gap:16px; margin-bottom:20px; flex-wrap:wrap;
+  }
+  .field{
+    flex:1; min-width:240px;
+  }
+  .field label{
+    display:block; font-size:12px; color:var(--ink-dim); margin-bottom:8px;
+    text-transform:uppercase; letter-spacing:1px; font-family:var(--mono);
+  }
+  .field input{
+    width:100%; background:var(--bg); border:1px solid #3d4035; color:var(--ink);
+    padding:12px 14px; border-radius:3px; font-size:14px; font-family:var(--sans);
+  }
+  .field input::placeholder{ color:#5a5d50; }
+
+  .paste-zone{
+    background:var(--bg);
+    border:1px dashed #4a4d3f;
+    border-radius:3px;
+    padding:24px;
+    font-family:var(--mono);
+    font-size:13px;
+    color:var(--ink-dim);
+    min-height:160px;
+    line-height:1.7;
+    white-space:pre;
+    overflow-x:auto;
+  }
+  .paste-zone .row{ color:var(--ink); }
+  .paste-zone .ghost{ color:#54584a; }
+
+  .actions{
+    display:flex; justify-content:space-between; align-items:center;
+    margin-top:24px;
+  }
+  .actions .hint{ font-size:12px; color:var(--ink-dim); }
+  .btn-optimize{
+    background:var(--wood); color:#1C1E1B; border:none;
+    font-family:var(--mono); font-weight:700; font-size:14px;
+    letter-spacing:1px; text-transform:uppercase;
+    padding:16px 36px; border-radius:3px; cursor:pointer;
+  }
+
+  .resultbar{
+    display:flex; gap:14px; margin-bottom:28px; flex-wrap:wrap;
+  }
+  .stat{
+    background:var(--bg-soft); border:1px solid #33362c; border-radius:4px;
+    padding:18px 22px; flex:1; min-width:150px;
+  }
+  .stat .v{ font-family:var(--mono); font-size:26px; font-weight:700; color:var(--wood); }
+  .stat .l{ font-size:11px; color:var(--ink-dim); text-transform:uppercase; letter-spacing:1px; margin-top:4px; }
+  .stat.ok .v{ color:var(--ok); }
+
+  /* ---- Plan de calepinage ---- */
+  .sheet-section{
+    margin-top:48px;
+  }
+  .sheet-section h2{
+    font-family:var(--mono); font-size:13px; text-transform:uppercase;
+    letter-spacing:2px; color:var(--ink-dim); margin-bottom:18px;
+    display:flex; align-items:center; gap:12px;
+  }
+  .sheet-section h2::after{
+    content:''; flex:1; height:1px; background:#33362c;
+  }
+
+  .sheet-page{
+    background:var(--panel);
+    color:#1C1E1B;
+    border-radius:2px;
+    padding:28px;
+    aspect-ratio: 297/210;
+    width:100%;
+    position:relative;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+  }
+  .sheet-head{
+    display:flex; justify-content:space-between; align-items:flex-start;
+    border-bottom:2px solid #1C1E1B;
+    padding-bottom:12px; margin-bottom:18px;
+  }
+  .sheet-head .title{ font-family:var(--mono); font-weight:700; font-size:18px; }
+  .sheet-head .meta{ text-align:right; font-size:12px; line-height:1.5; }
+  .sheet-head .meta b{ font-family:var(--mono); }
+  .tag-fil{
+    display:inline-block; background:#1C1E1B; color:var(--wood);
+    font-family:var(--mono); font-size:10px; padding:3px 8px; border-radius:2px;
+    letter-spacing:0.5px; margin-top:4px;
+  }
+
+  .panel-canvas{
+    position:relative;
+    width:100%;
+    height:62%;
+    border:2px solid #1C1E1B;
+    background:
+      repeating-linear-gradient(90deg, transparent 0 19px, rgba(0,0,0,0.04) 19px 20px);
+  }
+  .piece{
+    position:absolute;
+    border:1.5px solid #1C1E1B;
+    background:rgba(217,160,102,0.18);
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--mono); text-align:center; overflow:hidden;
+  }
+  .piece.fil{
+    background:
+      repeating-linear-gradient(0deg, rgba(28,30,27,0.07) 0 3px, transparent 3px 9px),
+      rgba(217,160,102,0.18);
+  }
+  .piece .txt{ font-size:11px; line-height:1.3; font-weight:700; }
+  .piece .txt .lp{ color:var(--wood-deep); font-size:10px; }
+  .piece.small .txt{ font-size:14px; font-weight:700; }
+  .piece.waste{
+    background:repeating-linear-gradient(45deg, transparent 0 6px, #d8d3c4 6px 7px);
+    border-style:dashed; opacity:0.7;
+  }
+
+  .legend{
+    margin-top:14px; display:flex; gap:24px; font-size:11px; font-family:var(--mono);
+    color:#5a5d50;
+  }
+  .legend .item{ display:flex; align-items:center; gap:6px;}
+  .legend .lp-num{
+    background:#1C1E1B; color:var(--wood); width:18px; height:18px; border-radius:2px;
+    display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700;
+  }
+
+  .footer-note{
+    text-align:center; margin-top:40px; color:#54584a; font-size:12px; font-family:var(--mono);
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <span class="mark">FOP·DÉBIT</span>
+    <span class="name">Optimiseur de calepinage</span>
+  </div>
+  <div class="nav">
+    <a class="active">Nouveau débit</a>
+    <a>Historique</a>
+    <a>Réglages</a>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <div class="lede">
+    <div>
+      <h1>Colle ton débit. On optimise.</h1>
+      <p>Copie ta fiche depuis Cadwork, lance le calcul, récupère ton calepinage prêt pour l'atelier.</p>
+    </div>
+  </div>
+
+  <div class="stagebox">
+    <div class="field-row">
+      <div class="field">
+        <label>Nom du projet (optionnel)</label>
+        <input type="text" placeholder="Ex. Cuisine Dubois — bloc bas">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Débit collé</label>
+      <div class="paste-zone"><span class="ghost">LP   LONGUEUR  LARGEUR  ÉP.  MATÉRIAU        QTÉ</span>
+<span class="row">01   850       400      19   Chêne massif     2</span>
+<span class="row">02   600       400      19   Chêne massif     4</span>
+<span class="row">03   2070      720      19   Mélaminé blanc   1</span>
+<span class="row">04   400       350      19   Chêne massif     6</span>
+<span class="ghost">…</span></div>
+    </div>
+
+    <div class="actions">
+      <span class="hint">Panneau standard 2800×2070 · lame 3mm · marge 5mm — réglages avancés ↓</span>
+      <button class="btn-optimize">Optimiser ▸</button>
+    </div>
+  </div>
+
+  <div class="resultbar">
+    <div class="stat ok"><div class="v">3</div><div class="l">Panneaux utilisés</div></div>
+    <div class="stat ok"><div class="v">8.4%</div><div class="l">Taux de chute</div></div>
+    <div class="stat"><div class="v">2</div><div class="l">Matériaux distincts</div></div>
+    <div class="stat"><div class="v">14</div><div class="l">Pièces placées</div></div>
+  </div>
+
+  <div class="sheet-section">
+    <h2>Fiche récap — feuille 1/1</h2>
+  </div>
+  <div class="sheet-page" style="margin-bottom:48px;">
+    <div class="sheet-head">
+      <div>
+        <div class="title">RÉCAPITULATIF DÉBIT</div>
+      </div>
+      <div class="meta">
+        <div><b>Cuisine Dubois — bloc bas</b></div>
+        <div>19 juin 2026</div>
+      </div>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px; font-family:var(--mono); font-size:12px;">
+      <div>
+        <div style="font-weight:700; margin-bottom:10px; letter-spacing:1px; text-transform:uppercase; font-size:11px; color:#5a5d50;">Panneaux par matériau</div>
+        <div style="line-height:2;">
+          Chêne massif 19mm — 2 panneaux<br>
+          Mélaminé blanc 19mm — 1 panneau
+        </div>
+      </div>
+      <div>
+        <div style="font-weight:700; margin-bottom:10px; letter-spacing:1px; text-transform:uppercase; font-size:11px; color:#5a5d50;">Synthèse</div>
+        <div style="line-height:2;">
+          Taux de chute global : 8.4%<br>
+          Métrage matière : 17.2 m²
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sheet-section">
+    <h2>Plan de calepinage — panneau 1/3</h2>
+  </div>
+  <div class="sheet-page">
+    <div class="sheet-head">
+      <div>
+        <div class="title">PANNEAU 1</div>
+        <span class="tag-fil">FIL OBLIGATOIRE ▸</span>
+      </div>
+      <div class="meta">
+        <b>Chêne massif</b> · 19mm<br>
+        2800 × 2070 mm
+      </div>
+    </div>
+
+    <div class="panel-canvas">
+      <!-- pièces avec fil obligatoire, texte dans rectangle -->
+      <div class="piece fil" style="left:2%; top:4%; width:30%; height:38%;">
+        <div class="txt"><span class="lp">LP01</span><br>850×400</div>
+      </div>
+      <div class="piece fil" style="left:34%; top:4%; width:30%; height:38%;">
+        <div class="txt"><span class="lp">LP01</span><br>850×400</div>
+      </div>
+      <div class="piece fil" style="left:2%; top:44%; width:22%; height:38%;">
+        <div class="txt"><span class="lp">LP02</span><br>600×400</div>
+      </div>
+      <div class="piece fil" style="left:26%; top:44%; width:22%; height:38%;">
+        <div class="txt"><span class="lp">LP02</span><br>600×400</div>
+      </div>
+      <!-- petites pièces -> bascule légende -->
+      <div class="piece fil small" style="left:50%; top:44%; width:9%; height:18%;">
+        <div class="txt">04</div>
+      </div>
+      <div class="piece fil small" style="left:60%; top:44%; width:9%; height:18%;">
+        <div class="txt">04</div>
+      </div>
+      <div class="piece fil small" style="left:50%; top:64%; width:9%; height:18%;">
+        <div class="txt">04</div>
+      </div>
+      <div class="piece fil small" style="left:60%; top:64%; width:9%; height:18%;">
+        <div class="txt">04</div>
+      </div>
+      <!-- chute -->
+      <div class="piece waste" style="left:70%; top:4%; width:28%; height:78%;">
+      </div>
+    </div>
+
+    <div class="legend">
+      <div class="item"><span class="lp-num">04</span> 400×350 mm — chêne massif</div>
+      <div class="item" style="color:#8a8d80;">Zone hachurée = chute</div>
+      <div class="item" style="color:#8a8d80;">Hachures fines = sens du fil</div>
+    </div>
+  </div>
+
+  <div class="footer-note">— Maquette d'intention, dimensions et données fictives —</div>
+
+</div>
+
+</body>
+</html>

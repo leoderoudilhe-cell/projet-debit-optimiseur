@@ -1,0 +1,15 @@
+# Python
+**/__pycache__/
+*.pyc
+**/.venv/
+**/.pytest_cache/
+
+# Secrets / config locale
+**/.env
+
+# Artefacts runtime (régénérables)
+storage/pdfs/
+storage/*.db
+
+# macOS
+.DS_Store
