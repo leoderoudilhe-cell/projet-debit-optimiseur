@@ -1,5 +1,30 @@
 # Changelog — Débit Optimiseur
 
+## 2026-06-25 (c) — Retours atelier de Tom (3 correctifs)
+
+### Coupe depuis le HAUT du panneau (`pdf/layout.py`)
+- Tom coupe à la scie à panneaux **du haut vers le bas** (il enlève chaque bande ;
+  sinon la chute reste au-dessus et bloque la lame). Le plan empilait depuis le bas.
+  Corrigé : **axe Y inversé au rendu** → 1ʳᵉ bande en haut, chute en bas, coupes
+  H1, H2… numérotées et mesurées **depuis le haut**.
+
+### Légende des petites pièces — bug corrigé (`pdf/layout.py`)
+- Les pièces trop petites pour afficher leurs cotes devaient basculer en légende de
+  bas de page, mais la légende était construite à partir d'un **dict vide** (rempli
+  seulement plus tard, pendant le rendu du flowable) → cotes jamais affichées.
+  Constaté par Tom (panneau 9/13, n° 520 et 603). Corrigé : la légende est
+  **pré-calculée** avant le rendu (même logique de fit, via `pdfmetrics`). Vérifié
+  sur les vraies données : n°520=1454×80 et n°603=470×50 apparaissent désormais.
+
+### Collage depuis Excel (`parser/cadwork_csv.py`)
+- Tom ne peut copier-coller son débit que depuis Excel — or Excel met le presse-papier
+  en **tabulations**, pas en `;`, donc le collé échouait. Ajout d'une **détection
+  automatique du séparateur** (`;`, tab, `,`) sur la ligne d'en-tête.
+
+### Tests
+- +`test_parser.py` (séparateurs, encodage) et +`test_layout.py` (légende, flip Y).
+  Suite totale : **33 tests** verts.
+
 ## 2026-06-25 (b) — Audit global, correctifs, optimisation validée, déploiement
 
 ### Bug critique corrigé — encodage du copier-coller

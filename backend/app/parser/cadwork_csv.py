@@ -52,9 +52,17 @@ def parse_cadwork_csv(raw: str | bytes) -> list[Piece]:
             data_start = i
             break
 
+    # Détection automatique du séparateur. Cadwork exporte en ';', mais un
+    # copier-coller depuis Excel arrive TABULÉ ('\t'), et certains exports en ','.
+    # On choisit le séparateur le plus fréquent sur la ligne d'en-tête (repli ';').
+    header_line = lines[data_start] if data_start < len(lines) else ""
+    delimiter = max((";", "\t", ","), key=header_line.count)
+    if header_line.count(delimiter) == 0:
+        delimiter = ";"
+
     reader = csv.DictReader(
         io.StringIO("\n".join(lines[data_start:])),
-        delimiter=";",
+        delimiter=delimiter,
     )
 
     pieces: list[Piece] = []

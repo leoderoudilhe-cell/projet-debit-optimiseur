@@ -1,11 +1,17 @@
 """PDF Document 2 — Layout plans, one A4 page per panel.
 
 Each plan shows:
-- Placed pieces with dimensions (adaptive font, falls back to legend)
+- Placed pieces with dimensions (adaptive font, falls back to a page legend)
 - Grain direction hatch on grain-locked pieces
 - Horizontal CUT LINES with their Y-position and cut number (H1, H2 …)
   so Tom can program the panel saw directly from the plan
-- Waste zones clearly distinguished
+
+Orientation (retour atelier Tom) : on coupe à la scie à panneaux DEPUIS LE HAUT
+en descendant (on enlève chaque bande coupée, sinon la chute reste au-dessus et
+bloque la lame). Le plan est donc rendu « du haut vers le bas » : la 1ʳᵉ bande
+empaquetée est en HAUT, la chute en BAS, et les coupes H1, H2… sont numérotées
+du haut vers le bas. (Le moteur empile en interne depuis son origine ; on inverse
+uniquement l'axe Y au rendu — origine moteur = haut du panneau.)
 """
 
 from __future__ import annotations
@@ -17,6 +23,7 @@ from reportlab.platypus import SimpleDocTemplate, Spacer, PageBreak
 from reportlab.platypus.flowables import Flowable
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.platypus import Paragraph
+from reportlab.pdfbase.pdfmetrics import stringWidth
 
 from app.models import OptimizeResult, Panel, PlacedPiece
 
@@ -33,16 +40,46 @@ SANS = "Helvetica"
 MIN_FONT_PT = 6
 
 
+def _fit_font(label: str, dims: str, w_pts: float, h_pts: float) -> float:
+    """Plus grande police (≤10pt) pour laquelle n° + cotes tiennent dans le
+    rectangle. Renvoie une valeur < MIN_FONT_PT si rien ne tient proprement
+    (→ bascule en légende). N'utilise pas de canvas : décision reproductible
+    aussi bien au pré-calcul de la légende qu'au rendu."""
+    for size in [10, 8, 7, 6, MIN_FONT_PT - 0.5]:
+        lw = stringWidth(label, MONO, size)
+        dw = stringWidth(dims, SANS, max(size - 1.5, MIN_FONT_PT))
+        if max(lw, dw) + 4 <= w_pts - 4 and size * 2.8 <= h_pts - 4:
+            return size
+    return MIN_FONT_PT - 0.5
+
+
+def _legend_for_panel(panel: Panel, scale: float) -> dict[str, str]:
+    """Pièces dont le texte ne tient pas dans le rectangle → {n° position: cotes}.
+    Calculé AVANT le rendu pour que la légende de bas de page soit réellement
+    remplie (le rendu du flowable, lui, ne s'exécute qu'au doc.build())."""
+    legend: dict[str, str] = {}
+    for pp in panel.placed:
+        w_pts, h_pts = pp.w * scale, pp.h * scale
+        label = str(pp.piece.lp_number)
+        dims = f"{pp.w}×{pp.h}"
+        if _fit_font(label, dims, w_pts, h_pts) < MIN_FONT_PT:
+            legend[label] = dims
+    return legend
+
+
 class PanelFlowable(Flowable):
-    def __init__(self, panel: Panel, scale: float, draw_w: float, draw_h: float, legend: dict):
+    def __init__(self, panel: Panel, scale: float, draw_w: float, draw_h: float):
         super().__init__()
         self.panel = panel
         self.scale = scale
         self.draw_w = draw_w
         self.draw_h = draw_h
-        self.legend = legend
         self.width = draw_w
         self.height = draw_h
+
+    def _flip_y(self, y_mm: float, h_mm: float = 0.0) -> float:
+        """Inverse l'axe Y : origine moteur (y=0) → HAUT du panneau au rendu."""
+        return (self.panel.height - y_mm - h_mm) * self.scale
 
     def draw(self):
         c = self.canv
@@ -55,10 +92,10 @@ class PanelFlowable(Flowable):
         c.setLineWidth(0.8)
         c.rect(0, 0, self.draw_w, self.draw_h, fill=1, stroke=1)
 
-        # ── Placed pieces ──────────────────────────────────────────────────
+        # ── Placed pieces (axe Y inversé → 1ʳᵉ bande en haut) ───────────────
         for pp in panel.placed:
             x = pp.x * s
-            y = pp.y * s
+            y = self._flip_y(pp.y, pp.h)
             w = pp.w * s
             h = pp.h * s
 
@@ -72,7 +109,7 @@ class PanelFlowable(Flowable):
 
             label = str(pp.piece.lp_number)
             dims = f"{pp.w}×{pp.h}"
-            font_size = self._fit_font(c, label, dims, w, h)
+            font_size = _fit_font(label, dims, w, h)
 
             if font_size >= MIN_FONT_PT:
                 c.setFillColor(INK)
@@ -81,15 +118,15 @@ class PanelFlowable(Flowable):
                 c.setFont(SANS, max(font_size - 1.5, MIN_FONT_PT))
                 c.drawCentredString(x + w / 2, y + h / 2 - font_size * 1.2, dims)
             else:
+                # Trop petit : on n'affiche que le n° ; les cotes sont en légende.
                 c.setFillColor(INK)
                 c.setFont(MONO, min(8, max(MIN_FONT_PT, h * 0.4)))
                 c.drawCentredString(x + w / 2, y + h / 2 - 3, label)
-                self.legend[label] = dims
 
-        # ── Horizontal cut lines (shelf boundaries) ─────────────────────
+        # ── Horizontal cut lines (depuis le haut) ───────────────────────────
         for cut_idx, cut_y_mm in enumerate(panel.shelf_cuts, start=1):
-            cut_y_pts = cut_y_mm * s
-            if cut_y_pts >= self.draw_h:
+            cut_y_pts = self._flip_y(cut_y_mm)
+            if cut_y_pts <= 0 or cut_y_pts >= self.draw_h:
                 continue
 
             # Dashed red line across the full panel width
@@ -100,20 +137,11 @@ class PanelFlowable(Flowable):
             c.line(0, cut_y_pts, self.draw_w, cut_y_pts)
             c.restoreState()
 
-            # Cut label on the right edge: "H1 — 291mm"
+            # Cut label on the right edge: "H1 — 291mm" (distance depuis le haut)
             label = f"H{cut_idx} — {cut_y_mm}mm"
             c.setFillColor(CUT_LINE)
             c.setFont(SANS, 5.5)
             c.drawRightString(self.draw_w - 2, cut_y_pts + 1.5, label)
-
-    def _fit_font(self, c, label: str, dims: str, w_pts: float, h_pts: float) -> float:
-        for size in [10, 8, 7, 6, MIN_FONT_PT - 0.5]:
-            c.setFont(MONO, size)
-            lw = c.stringWidth(label, MONO, size)
-            dw = c.stringWidth(dims, SANS, max(size - 1.5, MIN_FONT_PT))
-            if max(lw, dw) + 4 <= w_pts - 4 and size * 2.8 <= h_pts - 4:
-                return size
-        return MIN_FONT_PT - 0.5
 
     def _draw_grain_hatch(self, c, x, y, w, h):
         c.saveState()
@@ -157,7 +185,8 @@ def generate_layout_pdf(result: OptimizeResult, project_name: str, path: str):
         drawn_w = panel.width * scale
         drawn_h = panel.height * scale
 
-        legend: dict[str, str] = {}
+        # Légende calculée AVANT le rendu (correctif : sinon le dict est vide).
+        legend = _legend_for_panel(panel, scale)
 
         has_grain = any(pp.piece.grain_locked for pp in panel.placed)
         grain_tag = " · FIL OBLIGATOIRE" if has_grain else ""
@@ -171,9 +200,9 @@ def generate_layout_pdf(result: OptimizeResult, project_name: str, path: str):
             ParagraphStyle("h", fontName=MONO, fontSize=7, textColor=INK, spaceAfter=3 * mm),
         ))
 
-        # Cut sequence legend
+        # Cut sequence legend — depuis le haut du panneau
         if panel.shelf_cuts:
-            cuts_text = "Coupes H : " + "  ".join(
+            cuts_text = "Coupes horizontales (depuis le haut) : " + "  ".join(
                 f"H{j+1}={y}mm" for j, y in enumerate(panel.shelf_cuts)
             )
             story.append(Paragraph(
@@ -182,18 +211,20 @@ def generate_layout_pdf(result: OptimizeResult, project_name: str, path: str):
                                textColor=CUT_LINE, spaceAfter=2 * mm),
             ))
 
-        panel_flowable = PanelFlowable(panel, scale, drawn_w, drawn_h, legend)
-        story.append(panel_flowable)
+        story.append(PanelFlowable(panel, scale, drawn_w, drawn_h))
 
-        bottom_parts = []
+        # Légende des pièces trop petites pour afficher leurs cotes dans le rectangle
         if legend:
-            bottom_parts.append(
-                "Légende : " + "  |  ".join(f"{k}={v}" for k, v in legend.items())
+            leg_text = "Légende cotes (pièces trop petites) : " + "  |  ".join(
+                f"n°{k} = {v}" for k, v in legend.items()
             )
-        story.append(Paragraph(
-            "  ·  ".join(bottom_parts) if bottom_parts else " ",
-            ParagraphStyle("leg", fontName=SANS, fontSize=6.5, textColor=INK_DIM, spaceBefore=3 * mm),
-        ))
+            story.append(Paragraph(
+                leg_text,
+                ParagraphStyle("leg", fontName=SANS, fontSize=6.5, textColor=INK_DIM,
+                               spaceBefore=3 * mm),
+            ))
+        else:
+            story.append(Spacer(1, 3 * mm))
 
         if i < len(result.panels) - 1:
             story.append(PageBreak())
