@@ -1,5 +1,13 @@
 # Roadmap
 
+> **Mise à jour 25 juin 2026 — audit + correctifs** (voir `CHANGELOG.md` à la racine) :
+> - ✅ **Bug moteur FFDH corrigé** : une pièce libre étroite/longue n'ouvre plus un « shelf »
+>   surdimensionné → moins de panneaux gaspillés (cœur de valeur de l'outil). +2 tests (16 verts).
+> - ✅ Sécurité : CORS restreint (allowlist), validation des entrées (422), race condition sur
+>   les réglages globaux supprimée. Dépôt git initialisé (`.gitignore` + secrets exclus).
+> - ⏳ Non traité (volontaire) : persistance Railway (Railway pas encore activé), retrait de
+>   `rectpack`/`maxrects.py` (code mort), PDF en paysage.
+
 ## Étape 0 — Prérequis avant de coder quoi que ce soit
 - [ ] Exemple réel de fiche de débit Cadwork déposé dans `exemple-donnees/`
 - [ ] Confirmer le mapping de colonnes réel vs. l'hypothèse posée dans la spec fonctionnelle
