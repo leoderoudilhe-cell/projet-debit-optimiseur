@@ -1,10 +1,10 @@
+import base64
 import json
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from collections import defaultdict
 
-from fastapi import APIRouter, File, UploadFile, Form, HTTPException, Depends
+from fastapi import APIRouter, UploadFile, Form, HTTPException, Depends
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
@@ -16,13 +16,23 @@ from app.config import settings
 
 router = APIRouter(prefix="/api")
 
+# Garde-fous contre les entrées pathologiques (un CSV malformé avec une quantité
+# énorme ferait exploser la mémoire via _expand ; un upload géant saturerait le
+# serveur). Limites larges pour ne jamais gêner un vrai débit d'atelier.
+MAX_UPLOAD_BYTES = 8 * 1024 * 1024      # 8 Mo (un débit Cadwork fait quelques Ko)
+MAX_TOTAL_PIECES = 50_000               # bien au-delà de tout débit réel
 
-def _read_raw(file, paste) -> bytes:
-    if file and file.filename:
-        return None  # will be awaited by caller
-    if paste:
-        return paste.encode("utf-8")
-    return None
+
+def _guard_input(raw: bytes, pieces: list[Piece]) -> None:
+    """Rejette les entrées trop grosses (taille fichier, nombre total de pièces)."""
+    if len(raw) > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="Fichier trop volumineux (max 8 Mo)")
+    total = sum(p.quantity for p in pieces)
+    if total > MAX_TOTAL_PIECES:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Trop de pièces ({total}). Vérifie la colonne Qté du débit.",
+        )
 
 
 def _apply_grain_overrides(pieces: list[Piece], overrides: dict[str, bool]) -> list[Piece]:
@@ -55,6 +65,7 @@ async def parse_only(
     pieces = parse_cadwork_csv(raw)
     if not pieces:
         raise HTTPException(status_code=422, detail="No valid pieces found in input")
+    _guard_input(raw, pieces)
 
     # Aggregate by material
     by_material: dict[str, dict] = {}
@@ -82,7 +93,7 @@ async def parse_only(
         ],
         # Store the raw CSV as base64 so the frontend can send it back in /optimize
         # without re-uploading the file (avoids a second file upload round-trip)
-        "raw_b64": __import__("base64").b64encode(raw).decode(),
+        "raw_b64": base64.b64encode(raw).decode(),
     }
 
 
@@ -101,7 +112,6 @@ async def run_optimize(
 ):
     # Priority: raw_b64 (from parse step) > file > paste
     if raw_b64:
-        import base64
         raw = base64.b64decode(raw_b64)
     elif file and file.filename:
         raw = await file.read()
@@ -123,6 +133,7 @@ async def run_optimize(
     pieces = parse_cadwork_csv(raw)
     if not pieces:
         raise HTTPException(status_code=422, detail="No valid pieces found in input")
+    _guard_input(raw, pieces)
 
     overrides: dict[str, bool] = {}
     if grain_overrides:

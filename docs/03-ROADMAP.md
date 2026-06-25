@@ -1,12 +1,16 @@
 # Roadmap
 
-> **Mise à jour 25 juin 2026 — audit + correctifs** (voir `CHANGELOG.md` à la racine) :
-> - ✅ **Bug moteur FFDH corrigé** : une pièce libre étroite/longue n'ouvre plus un « shelf »
->   surdimensionné → moins de panneaux gaspillés (cœur de valeur de l'outil). +2 tests (16 verts).
-> - ✅ Sécurité : CORS restreint (allowlist), validation des entrées (422), race condition sur
->   les réglages globaux supprimée. Dépôt git initialisé (`.gitignore` + secrets exclus).
-> - ⏳ Non traité (volontaire) : persistance Railway (Railway pas encore activé), retrait de
->   `rectpack`/`maxrects.py` (code mort), PDF en paysage.
+> **Mise à jour 25 juin 2026 (b) — audit global** (voir `CHANGELOG.md`) :
+> - ✅ **Bug critique copier-coller corrigé** : le texte collé (UTF-8) cassait sur les accents.
+> - ✅ **Optimisation validée par recherche + mesures** : FFDH quasi-optimal (13 vs plancher 12) ;
+>   knapsack/BFDH/classe-hauteur testés et écartés (font pire). Multi-start best-of ajouté (jamais pire).
+> - ✅ Code mort retiré (`maxrects.py`, dép. `rectpack`, fonctions mortes). Garde-fous d'entrée (413/422).
+> - ✅ Tests API de bout en bout (`test_api.py`). Suite : **24 verts**.
+> - ✅ **Déploiement** : Dockerfile universel + `render.yaml` + `railway.toml` (Docker). Déployé sur Railway.
+> - ⏳ Reste : persistance (volume/Postgres) si historique à conserver entre redéploiements ; PDF en paysage (option).
+>
+> **Mise à jour 25 juin 2026 (a) — premiers correctifs** :
+> - ✅ Bug moteur FFDH (shelf surdimensionné) corrigé. ✅ Sécurité : CORS, validation, race condition. ✅ Git init.
 
 ## Étape 0 — Prérequis avant de coder quoi que ce soit
 - [ ] Exemple réel de fiche de débit Cadwork déposé dans `exemple-donnees/`

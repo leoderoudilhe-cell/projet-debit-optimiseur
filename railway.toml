@@ -1,8 +1,11 @@
+# Déploiement Railway. Build via le Dockerfile racine (universel).
+# Healthcheck sur /api/health. Pour persister l'historique entre redéploiements,
+# attacher un volume Railway monté sur /app/storage (sinon stockage éphémère).
 [build]
-builder = "NIXPACKS"
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
 
 [deploy]
-startCommand = "cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT"
 healthcheckPath = "/api/health"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"

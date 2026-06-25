@@ -34,10 +34,14 @@ def _is_ignored(material: str) -> bool:
 
 def parse_cadwork_csv(raw: str | bytes) -> list[Piece]:
     if isinstance(raw, bytes):
+        # Le copier-coller depuis le navigateur arrive en UTF-8 (méthode d'entrée
+        # principale) ; les fichiers exportés par Cadwork sont en windows-1252.
+        # On tente UTF-8 strict d'abord : il échoue proprement sur les octets
+        # accentués cp1252 (ex. 0xE9 isolé), ce qui déclenche le bon repli.
         try:
-            raw = raw.decode("windows-1252")
+            raw = raw.decode("utf-8")
         except UnicodeDecodeError:
-            raw = raw.decode("utf-8", errors="replace")
+            raw = raw.decode("windows-1252")
 
     lines = raw.splitlines()
 

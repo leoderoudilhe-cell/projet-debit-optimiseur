@@ -1,0 +1,15 @@
+# Blueprint Render (offre gratuite) — alternative 100% gratuite à Railway.
+# Sur render.com : New > Blueprint > connecter ce dépôt GitHub. Render lit ce
+# fichier et déploie. Le service gratuit s'endort après 15 min d'inactivité
+# (1er chargement ~30 s au réveil), suffisant pour un usage atelier ponctuel.
+services:
+  - type: web
+    name: debit-optimiseur
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /api/health
+    # NB : l'offre gratuite Render n'a pas de disque persistant. PDFs + historique
+    # sont éphémères (réinitialisés à chaque redéploiement). Pour persister :
+    # passer en plan payant + ajouter un bloc `disk` monté sur /app/storage,
+    # ou brancher une base Postgres via la variable DATABASE_URL.

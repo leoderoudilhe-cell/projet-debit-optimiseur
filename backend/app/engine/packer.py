@@ -11,14 +11,26 @@ Grain constraint: grain-locked pieces always have their long side in x
 
 Grouping: pieces with different (thickness, material) are never mixed on
 the same panel — each group is optimized independently.
+
+Optimisation (multi-start best-of) :
+  La structure en bandes horizontales (shelf) est imposée par la scie à format
+  et NON négociable. Dans ce cadre, le tri "plus petit côté décroissant" (FFDH)
+  s'est révélé quasi-optimal sur les données réelles (mesuré : 13 panneaux pour
+  un plancher-surface théorique de 12). Les variantes plus complexes testées
+  (best-fit, knapsack-par-niveau, regroupement par classe de hauteur) font aussi
+  bien ou PIRE. On conserve donc le FFDH éprouvé, mais on l'enveloppe dans un
+  multi-start : chaque groupe est packé avec plusieurs ordres de tri et on garde
+  le résultat utilisant le moins de panneaux. Garantie : jamais pire que le FFDH
+  (qui fait partie des candidats), parfois meilleur sur d'autres jeux de données.
 """
 
 from __future__ import annotations
 
 from collections import defaultdict
+from typing import Callable
 
 from app.config import settings
-from app.engine.shelf import ShelfBin, ShelfRect
+from app.engine.shelf import ShelfBin
 from app.models import Piece, PlacedPiece, Panel, OptimizeResult
 
 
@@ -30,13 +42,24 @@ def _expand(pieces: list[Piece]) -> list[tuple[Piece, int]]:
     return instances
 
 
-def _sort_key(item: tuple[Piece, int]) -> int:
-    piece = item[0]
-    # For sorting: use the height that will actually be placed in the shelf
-    # (short side for grain-locked, min for free)
-    if piece.grain_locked:
-        return min(piece.width, piece.length)
-    return min(piece.width, piece.length)
+# ── Clés de tri candidates pour le multi-start ───────────────────────────────
+# La hauteur de bande d'une pièce = son plus petit côté (grain-locked : côté court
+# en y ; libre : on la couche sur son côté court). Le tri par défaut (plus petit
+# côté décroissant = FFDH) est en tête : sur égalité de nb de panneaux, il gagne.
+def _short_side(p: Piece) -> int:
+    return min(p.width, p.length)
+
+
+def _long_side(p: Piece) -> int:
+    return max(p.width, p.length)
+
+
+SORT_STRATEGIES: list[Callable[[tuple[Piece, int]], object]] = [
+    lambda it: -_short_side(it[0]),                                  # FFDH (défaut)
+    lambda it: -(it[0].width * it[0].length),                        # aire décroissante
+    lambda it: (-_short_side(it[0]), -_long_side(it[0])),            # côté court puis long
+    lambda it: -_long_side(it[0]),                                   # plus grand côté
+]
 
 
 def _pack_group(
@@ -48,18 +71,13 @@ def _pack_group(
     material: str,
     thickness: int,
     panel_index_start: int,
+    sort_key: Callable[[tuple[Piece, int]], object],
 ) -> list[Panel]:
     eff_w = panel_w - 2 * margin
     eff_h = panel_h - 2 * margin
 
-    # Sort tallest first so shelves pack well (FFDH heuristic)
-    def placed_height(item: tuple[Piece, int]) -> int:
-        p = item[0]
-        if p.grain_locked:
-            return min(p.width, p.length)   # short side = shelf height
-        return min(p.width, p.length)        # same for free (rotate taller → shorter)
-
-    instances = sorted(instances, key=placed_height, reverse=True)
+    # Tri selon la stratégie multi-start (tallest-first / FFDH par défaut)
+    instances = sorted(instances, key=sort_key)
 
     panels: list[Panel] = []
     remaining = list(instances)
@@ -162,17 +180,28 @@ def optimize(
     all_panels: list[Panel] = []
     for (thickness, material), group_pieces in sorted(groups.items()):
         instances = _expand(group_pieces)
-        panels = _pack_group(
-            instances=instances,
-            panel_w=panel_w,
-            panel_h=panel_h,
-            kerf=kerf,
-            margin=margin,
-            material=material,
-            thickness=thickness,
-            panel_index_start=len(all_panels),
-        )
-        all_panels.extend(panels)
+
+        # Multi-start : on packe ce groupe avec chaque stratégie de tri et on garde
+        # celle qui utilise le moins de panneaux. À surface placée constante (toutes
+        # les pièces sont toujours placées), moins de panneaux = moins de chute.
+        # Le 1er candidat (FFDH) gagne les égalités → comportement historique préservé.
+        best_panels: list[Panel] | None = None
+        for sort_key in SORT_STRATEGIES:
+            candidate = _pack_group(
+                instances=instances,
+                panel_w=panel_w,
+                panel_h=panel_h,
+                kerf=kerf,
+                margin=margin,
+                material=material,
+                thickness=thickness,
+                panel_index_start=len(all_panels),
+                sort_key=sort_key,
+            )
+            if best_panels is None or len(candidate) < len(best_panels):
+                best_panels = candidate
+
+        all_panels.extend(best_panels or [])
 
     total_pieces = sum(p.quantity for p in pieces)
     total_area = sum(pan.total_area for pan in all_panels)

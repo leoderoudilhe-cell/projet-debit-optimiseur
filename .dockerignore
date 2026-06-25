@@ -1,0 +1,15 @@
+# Ne pas copier dans l'image (taille + sécurité)
+**/.venv/
+**/__pycache__/
+**/*.pyc
+**/.pytest_cache/
+.git/
+.DS_Store
+**/.DS_Store
+**/.env
+storage/pdfs/
+storage/*.db
+maquette-reference/
+docs/
+exemple-donnees/
+*.md
