@@ -1,5 +1,10 @@
 # Roadmap
 
+> **Mise à jour 28 juin 2026 — migration sur le VPS** :
+> - ✅ **Hébergement migré sur le VPS Hostinger** (plus de Railway/Render). L'app tourne en
+>   conteneur Docker `optim` (port interne 8000 → 8002 sur l'hôte), exposée par Caddy (TLS auto)
+>   sur **https://tomoptimisateur.duckdns.org**. Fichiers `render.yaml` / `railway.toml` / `Procfile` supprimés.
+>
 > **Mise à jour 25 juin 2026 (b) — audit global** (voir `CHANGELOG.md`) :
 > - ✅ **Bug critique copier-coller corrigé** : le texte collé (UTF-8) cassait sur les accents.
 > - ✅ **Optimisation validée par recherche + mesures** : FFDH quasi-optimal (13 vs plancher 12) ;
@@ -21,7 +26,7 @@
 ## Étape 1 — Setup projet
 - Structure du repo (backend / frontend séparés ou monorepo léger, au choix de Claude Code selon la stack retenue)
 - Dépendances de base installées (voir `04-STACK-TECHNIQUE.md`)
-- Un "hello world" qui tourne en local et déployable sur Railway dès le début (éviter de découvrir des problèmes de déploiement à la fin)
+- Un "hello world" qui tourne en local et déployable sur le VPS (conteneur Docker) dès le début (éviter de découvrir des problèmes de déploiement à la fin)
 
 ## Étape 2 — Moteur de calcul (cœur du projet, priorité absolue)
 - Implémenter le bin-packing 2D avec rectpack sur des données factices (un débit simple inventé, pas besoin du vrai format encore)
@@ -49,7 +54,7 @@
 - Stockage des métadonnées d'export (nom projet, date) + fichiers PDF générés
 - Page de consultation en lecture seule
 
-## Étape 7 — Déploiement Railway
+## Étape 7 — Déploiement VPS (Docker + Caddy)
 - Variables d'environnement, base de données Postgres provisionnée
 - Test de bout en bout en conditions réelles
 

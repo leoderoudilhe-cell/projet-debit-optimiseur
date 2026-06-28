@@ -1,4 +1,5 @@
-# Image universelle — fonctionne sur Railway, Render, Fly.io, Hugging Face Spaces.
+# Image Docker portable — déployée sur le VPS Hostinger (conteneur `optim`,
+# port interne 8000 mappé sur 8002, derrière Caddy/TLS sur tomoptimisateur.duckdns.org).
 FROM python:3.12-slim
 
 # Dépendances système minimales (reportlab n'a pas besoin de plus en slim)
@@ -24,5 +25,5 @@ RUN mkdir -p /app/storage/pdfs
 WORKDIR /app/backend
 
 EXPOSE 8000
-# $PORT est fourni par l'hébergeur (Railway/Render). Défaut 8000 en local.
+# $PORT optionnel ; sur le VPS le conteneur écoute sur 8000 (mappé 8002, exposé par Caddy). Défaut 8000 en local.
 CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

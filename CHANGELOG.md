@@ -1,5 +1,14 @@
 # Changelog — Débit Optimiseur
 
+## 2026-06-28 — Migration de l'hébergement sur le VPS (Docker + Caddy)
+
+### Déploiement
+- L'app n'est plus hébergée sur Railway/Render : elle tourne désormais en **Docker sur
+  le VPS Hostinger** (conteneur `optim`, port interne **8000** mappé sur **8002** côté hôte),
+  exposée via **Caddy** (TLS automatique) sur **https://tomoptimisateur.duckdns.org**.
+- Suppression des fichiers spécifiques aux PaaS : `render.yaml`, `railway.toml`, `Procfile`.
+  Le `Dockerfile` (image portable) reste la base du déploiement.
+
 ## 2026-06-25 (c) — Retours atelier de Tom (3 correctifs)
 
 ### Coupe depuis le HAUT du panneau (`pdf/layout.py`)
